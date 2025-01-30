@@ -1,6 +1,19 @@
 # Transparent Data Encryption for Spark
 
-first, create a ```setenv``` file with the following content
+This is a custom implementation of the the java class org.apache.hadoop.fs.s3a.S3AFileSystem 
+used to read and write spark data frames from and to S3 buckets.
+
+This provides a transparent data encryption (and decryption) for spark users: they must manage and provide a secret key and an initialization vector, and Spark performs the decryption upon reading from S3, and data encryption upon writing to S3. 
+
+To make Spark use this custom implementation, set the following configuration parameter
+```python
+spark = SparkSession.builder \
+...
+    .config("spark.hadoop.fs.s3a.impl", "my.custom.fs.EncryptedS3AFileSystem") \
+...
+```
+
+First, create a ```setenv``` file with the following content
 
 ```shell
 export S3_ENDPOINT=<your s3 endpoint>
