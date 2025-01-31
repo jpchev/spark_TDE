@@ -22,7 +22,10 @@ import java.util.Base64;
 
 public class Test {
     private final static String encryptionKeyBase64 = "g+7bgI4aOujRoccZxyi5CVsWrUgkwLzWYmiYcZKW0Gk=";
+
+    // the iv must be generated using a secure random generator, this is hardcoded only for testing purposes
     private final static String ivBase64 = "PRrfBZze6v914JgV97V/IQ==";
+    
     public static final String TRANSFORMATION = "AES/CTR/NoPadding";
 
     private static byte[] base64toBytes(String base64str) {
