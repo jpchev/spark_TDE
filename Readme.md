@@ -49,5 +49,4 @@ source setenv
 
 see https://www.baeldung.com/java-aes-encryption-decryption
 
-- implement GCM 
-- implement snappy compatibility
+todo: implement snappy compatibility
