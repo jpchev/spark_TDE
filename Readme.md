@@ -48,5 +48,3 @@ source setenv
 ```
 
 see https://www.baeldung.com/java-aes-encryption-decryption
-
-todo: implement snappy compatibility

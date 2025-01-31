@@ -31,6 +31,5 @@ rows = [Row(name=f"test{i}") for i in range(1, 1000000)]
 
 df = spark.createDataFrame(rows, ["col"])
 df.write.mode("overwrite") \
-    .option("compression", "none") \
     .format("delta") \
     .save(f"s3a://{S3_BUCKET_NAME}/{s3_key}")
