@@ -27,9 +27,12 @@ print(spark._jsc.hadoopConfiguration().get("fs.s3a.impl"))
 # Define S3 path
 s3_key = "encrypted_data"
 
-rows = [Row(name=f"test{i}") for i in range(1, 1000000)]
+names = ["John", "Paul", "Ringo", "George"]
+data = [(names[i % len(names)], i) for i in range(1, 1000000)]
+columns = ["Name", "ID"]
 
-df = spark.createDataFrame(rows, ["col"])
+df = spark.createDataFrame(data, columns)
 df.write.mode("overwrite") \
     .format("delta") \
+    .partitionBy("Name") \
     .save(f"s3a://{S3_BUCKET_NAME}/{s3_key}")
