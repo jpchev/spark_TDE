@@ -5,8 +5,9 @@ S3_ENDPOINT = os.environ['S3_ENDPOINT']
 S3_ACCESS_KEY = os.environ['S3_ACCESS_KEY']
 S3_SECRET_KEY = os.environ['S3_SECRET_KEY']
 S3_BUCKET_NAME = os.environ['S3_BUCKET_NAME']
-
+ 
 key = 'g+7bgI4aOujRoccZxyi5CVsWrUgkwLzWYmiYcZKW0Gk='
+# the iv must be generated using a secure random generator, this is hardcoded only for testing purposes
 iv = 'PRrfBZze6v914JgV97V/IQ=='
 
 spark = SparkSession.builder \
