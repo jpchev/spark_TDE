@@ -35,7 +35,6 @@ public class Test {
 
     public static void main(String[] ars) throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidAlgorithmParameterException, InvalidKeyException, IOException {
-        //decryptSeekableIS("encrypted_data_KO/part-00011-4a214763-4d8e-4d9f-8e65-769a432b36ea-c000.parquet");
         encryptSeekableIS("test.txt", "this is an example of plain text to be encrypted");
         decryptSeekableIS("test.txt");
     }
@@ -93,14 +92,14 @@ public class Test {
         System.out.println(new String(decryptedBytes));
     }
 
-    private static void decryptFileIS() throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, IOException {
+    private static void decryptFileIS(String fileName) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, IOException {
         SecretKey encryptionKey = base64toKey(encryptionKeyBase64);
         byte[] iv = base64toBytes(ivBase64);
 
         Cipher cipher = Cipher.getInstance(TRANSFORMATION);
         cipher.init(Cipher.DECRYPT_MODE, encryptionKey, new IvParameterSpec(iv));
 
-        FileInputStream fis = new FileInputStream("part-00000-bcc67cb9-828b-4506-82c9-d9ed389fbb6b-c000.snappy.parquet");
+        FileInputStream fis = new FileInputStream(fileName);
         CipherInputStream in = new CipherInputStream(fis, cipher);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 

@@ -121,7 +121,7 @@ public class SeekableCipherInputStream extends InputStream implements Seekable, 
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        // load and decrypt the block if needed
+        // load and decrypt a new block if needed
         if (readBlockNumber != position / AES_BLOCK_SIZE) {
             try {
                 if (readDecryptAESBlock() == -1) {
@@ -149,7 +149,7 @@ public class SeekableCipherInputStream extends InputStream implements Seekable, 
         // load block in memory
         int bytesRead = baseStream.read(encryptedBlock, 0, AES_BLOCK_SIZE);
         if (bytesRead == -1) {
-            return -1;
+            return -1; // End Of File
         }
         int totalBLockBytesRead = bytesRead;
         while (totalBLockBytesRead < encryptedBlock.length && bytesRead > 0) {

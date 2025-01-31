@@ -21,16 +21,15 @@ import java.util.Base64;
 
 /**
  * This class extends the S3AFileSystem class and overrides the create and open methods.
- * It encrypts parquet files when writing to a file and decrypts parquet files when reading from a file.
+ * It encrypts parquet files when writing and decrypts parquet files when reading.
  * Files not ending with the .parquet extension are not encrypted, nor decrypted.
- * The encryption algorithm used is AES-256 in CTR mode.
- * The key and initialization vector (IV) are stored in the configuration.
- * The key and IV are used to initialize the Cipher object.
- * The encrypted data is written to the S3 bucket.
- * The encrypted data is read from the S3 bucket and decrypted on the fly.
- * The key size must be 256 bits (32 bytes) because we use AES-256
- * AES blocks are 16 bytes large (128 bits).
+ * The encryption algorithm used is AES-256 in CTR mode, because it is suitable for the "seekable" feature.
+ * The key and initialization vector (IV), used to initialize the Cipher object, are passed through the Spark configuration object.
+ *
+ * The key size must be 256 bits (32 bytes),
+ * AES blocks are 16 bytes large (128 bits), the last block can be under 16 bytes.
  * The initialization vector (IV) must be 16 bytes long (128 bits).
+ *
  * The IV is being increment by 1 when switching to the next consecutive block.
  */
 public class EncryptedS3AFileSystem extends S3AFileSystem {
