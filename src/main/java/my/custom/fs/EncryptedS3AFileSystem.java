@@ -4,9 +4,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.util.Progressable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
@@ -18,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Base64;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * This class extends the S3AFileSystem class and overrides the create and open methods.
@@ -34,6 +39,8 @@ import java.util.Base64;
  */
 public class EncryptedS3AFileSystem extends S3AFileSystem {
 
+    public static final Logger LOG = LoggerFactory.getLogger(EncryptedS3AFileSystem.class);
+
     private static final String CIPHER_TRANSFORM = "AES/CTR/NoPadding";
 
     private static final String PARQUET_FILE_EXTENSION = ".parquet";
@@ -48,11 +55,8 @@ public class EncryptedS3AFileSystem extends S3AFileSystem {
                                      boolean overwrite, int bufferSize,
                                      short replication, long blockSize,
                                      Progressable progress) throws IOException {
-        if (path.getName().endsWith(PARQUET_FILE_EXTENSION)) {
-            return encryptStream(super.create(path, permission, overwrite, bufferSize, replication, blockSize, progress));
-        } else {
-            return super.create(path, permission, overwrite, bufferSize, replication, blockSize, progress);
-        }
+	LOG.debug("create {}", path.getName());
+        return encryptStream(super.create(path, permission, overwrite, bufferSize, replication, blockSize, progress));
     }
 
     @Override
@@ -60,11 +64,8 @@ public class EncryptedS3AFileSystem extends S3AFileSystem {
                                                  boolean overwrite, int bufferSize,
                                                  short replication, long blockSize,
                                                  Progressable progress) throws IOException {
-        if (path.getName().endsWith(PARQUET_FILE_EXTENSION)) {
-            return encryptStream(super.createNonRecursive(path, permission, overwrite, bufferSize, replication, blockSize, progress));
-        } else {
-            return super.createNonRecursive(path, permission, overwrite, bufferSize, replication, blockSize, progress);
-        }
+	LOG.debug("createNonRecursive {}", path.getName());
+        return encryptStream(super.createNonRecursive(path, permission, overwrite, bufferSize, replication, blockSize, progress));
     }
 
     public FSDataOutputStream encryptStream(FSDataOutputStream baseStream) throws IOException {
@@ -111,6 +112,7 @@ public class EncryptedS3AFileSystem extends S3AFileSystem {
 
     @Override
     public FSDataInputStream open(Path path) throws IOException {
+	LOG.debug("open {}", path.getName());
         if (path.getName().endsWith(PARQUET_FILE_EXTENSION)) {
             FSDataInputStream encryptedStream = super.open(path);
             InputStream decryptedStream = decryptStream(encryptedStream);
@@ -118,6 +120,23 @@ public class EncryptedS3AFileSystem extends S3AFileSystem {
         } else {
             return super.open(path);
         }
+    }
+
+    @Override
+    public CompletableFuture<FSDataInputStream> openFileWithOptions(
+            final Path rawPath,
+            final OpenFileParameters parameters) throws IOException {
+	LOG.debug("openFileWithOptions {}", rawPath.getName());
+        CompletableFuture<FSDataInputStream> encryptedStreamFuture = super.openFileWithOptions(rawPath, parameters);
+        return encryptedStreamFuture.thenApply(encryptedStream -> {
+            InputStream decryptedStream = null;
+            try {
+                decryptedStream = decryptStream(encryptedStream);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return new FSDataInputStream(decryptedStream);
+        });
     }
 
     // Decrypt the stream

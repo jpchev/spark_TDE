@@ -30,7 +30,7 @@ python3 -m venv venv
 now, source the virtual environment and install the pip components
 
 ```bash
-source pyspark_env/bin/activate
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
