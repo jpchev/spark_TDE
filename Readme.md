@@ -20,6 +20,7 @@ export S3_ENDPOINT=<your s3 endpoint>
 export S3_ACCESS_KEY=<your s3 access key>
 export S3_SECRET_KEY=<your s3 secret key>
 export S3_BUCKET_NAME=<your s3 bucket name>
+export SPARK_CONF_DIR=.
 ```
 
 then create a python virtual environment
