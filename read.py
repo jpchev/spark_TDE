@@ -21,7 +21,7 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.endpoint", S3_ENDPOINT) \
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .config("spark.hadoop.fs.s3a.impl", "my.custom.fs.EncryptedS3AFileSystem") \
+    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.EncryptedS3AFileSystem") \
     .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider") \
     .getOrCreate()
 

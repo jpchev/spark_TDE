@@ -1,4 +1,4 @@
-package my.custom.fs;
+package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -6,23 +6,30 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-import javax.crypto.Cipher;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
+import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 /**
  * This class extends the S3AFileSystem class and overrides the create and open methods.
@@ -42,8 +49,6 @@ public class EncryptedS3AFileSystem extends S3AFileSystem {
     public static final Logger LOG = LoggerFactory.getLogger(EncryptedS3AFileSystem.class);
 
     private static final String CIPHER_TRANSFORM = "AES/CTR/NoPadding";
-
-    private static final String PARQUET_FILE_EXTENSION = ".parquet";
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
@@ -68,19 +73,30 @@ public class EncryptedS3AFileSystem extends S3AFileSystem {
         return encryptStream(super.createNonRecursive(path, permission, overwrite, bufferSize, replication, blockSize, progress));
     }
 
+    /**
+     * encrypts a stream
+     * @param baseStream the stream containing the plain text data
+     * @return the encrypted data
+     * @throws IOException
+     */
     public FSDataOutputStream encryptStream(FSDataOutputStream baseStream) throws IOException {
         try {
-            Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORM);
-            Configuration conf = getConf();
-            String encryptionKeyBase64 = conf.get("aes.key");
-            String ivBase64 = conf.get("aes.iv");
-            SecretKey secretKey = base64toKey(encryptionKeyBase64);
-            byte[] iv = base64toBytes(ivBase64);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
+            Cipher cipher = getCipher();
             return new FSDataOutputStream(new CipherOutputStream(baseStream, cipher), null);
         } catch (Exception e) {
             throw new IOException("Error initializing encryption", e);
         }
+    }
+
+    private Cipher getCipher() throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+        Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORM);
+        Configuration conf = getConf();
+        String encryptionKeyBase64 = conf.get("aes.key");
+        String ivBase64 = conf.get("aes.iv");
+        SecretKey secretKey = base64toKey(encryptionKeyBase64);
+        byte[] iv = base64toBytes(ivBase64);
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
+        return cipher;
     }
 
     private SecretKey generateEncryptionKey() throws IOException {
@@ -112,21 +128,17 @@ public class EncryptedS3AFileSystem extends S3AFileSystem {
 
     @Override
     public FSDataInputStream open(Path path) throws IOException {
-	LOG.debug("open {}", path.getName());
-        if (path.getName().endsWith(PARQUET_FILE_EXTENSION)) {
-            FSDataInputStream encryptedStream = super.open(path);
-            InputStream decryptedStream = decryptStream(encryptedStream);
-            return new FSDataInputStream(decryptedStream);
-        } else {
-            return super.open(path);
-        }
+	    LOG.debug("open {}", path.getName());
+        FSDataInputStream encryptedStream = super.open(path);
+        InputStream decryptedStream = decryptStream(encryptedStream);
+        return new FSDataInputStream(decryptedStream);
     }
 
     @Override
     public CompletableFuture<FSDataInputStream> openFileWithOptions(
             final Path rawPath,
             final OpenFileParameters parameters) throws IOException {
-	LOG.debug("openFileWithOptions {}", rawPath.getName());
+	    LOG.debug("openFileWithOptions {}", rawPath.getName());
         CompletableFuture<FSDataInputStream> encryptedStreamFuture = super.openFileWithOptions(rawPath, parameters);
         return encryptedStreamFuture.thenApply(encryptedStream -> {
             InputStream decryptedStream = null;

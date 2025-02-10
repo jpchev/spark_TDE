@@ -14,12 +14,13 @@ spark = SparkSession.builder \
     .appName("S3A Encryption in PySpark") \
     .config("spark.hadoop.aes.key", key) \
     .config("spark.hadoop.aes.iv", iv) \
-    .config("spark.hadoop.fs.s3a.impl", "my.custom.fs.EncryptedS3AFileSystem") \
+    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.EncryptedS3AFileSystem") \
     .config("spark.hadoop.fs.s3a.access.key", S3_ACCESS_KEY) \
     .config("spark.hadoop.fs.s3a.secret.key", S3_SECRET_KEY) \
     .config("spark.hadoop.fs.s3a.endpoint", S3_ENDPOINT) \
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+    .config("mapreduce.fileoutputcommitter.marksuccessfuljobs", "false") \
     .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider") \
     .getOrCreate()
 
@@ -29,7 +30,7 @@ print(spark._jsc.hadoopConfiguration().get("fs.s3a.impl"))
 s3_key = "encrypted_data"
 
 names = ["John", "Paul", "Ringo", "George"]
-data = [(names[i % len(names)], i) for i in range(1, 1000000)]
+data = [(names[i % len(names)], i) for i in range(1, 10)]
 columns = ["Name", "ID"]
 
 df = spark.createDataFrame(data, columns)
